@@ -155,7 +155,7 @@ cql_server::cql_server(distributed<cql3::query_processor>& qp, auth::service& au
         service::migration_notifier& mn, database& db, service::memory_limiter& ml, cql_server_config config, qos::service_level_controller& sl_controller)
     : server("CQLServer", clogger)
     , _query_processor(qp)
-    , _config(config)
+    , _config(std::move(config))
     , _max_concurrent_requests(db.get_config().max_concurrent_requests_per_shard)
     , _memory_available(ml.get_semaphore())
     , _notifier(std::make_unique<event_notifier>(mn))
