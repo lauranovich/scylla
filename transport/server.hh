@@ -153,7 +153,6 @@ private:
 
     distributed<cql3::query_processor>& _query_processor;
     cql_server_config _config;
-    size_t _max_request_size;
     utils::updateable_value<uint32_t> _max_concurrent_requests;
     semaphore& _memory_available;
     seastar::metrics::metric_groups _metrics;

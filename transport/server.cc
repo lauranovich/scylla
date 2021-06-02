@@ -156,7 +156,6 @@ cql_server::cql_server(distributed<cql3::query_processor>& qp, auth::service& au
     : server("CQLServer", clogger)
     , _query_processor(qp)
     , _config(config)
-    , _max_request_size(config.max_request_size)
     , _max_concurrent_requests(db.get_config().max_concurrent_requests_per_shard)
     , _memory_available(ml.get_semaphore())
     , _notifier(std::make_unique<event_notifier>(mn))
@@ -205,18 +204,18 @@ cql_server::cql_server(distributed<cql3::query_processor>& qp, auth::service& au
         sm::make_gauge("requests_blocked_memory_current", [this] { return _memory_available.waiters(); },
                         sm::description(
                             seastar::format("Holds the number of requests that are currently blocked due to reaching the memory quota limit ({}B). "
-                                            "Non-zero value indicates that our bottleneck is memory and more specifically - the memory quota allocated for the \"CQL transport\" component.", _max_request_size))),
+                                            "Non-zero value indicates that our bottleneck is memory and more specifically - the memory quota allocated for the \"CQL transport\" component.", _config.max_request_size))),
         sm::make_derive("requests_blocked_memory", _stats.requests_blocked_memory,
                         sm::description(
                             seastar::format("Holds an incrementing counter with the requests that ever blocked due to reaching the memory quota limit ({}B). "
-                                            "The first derivative of this value shows how often we block due to memory exhaustion in the \"CQL transport\" component.", _max_request_size))),
+                                            "The first derivative of this value shows how often we block due to memory exhaustion in the \"CQL transport\" component.", _config.max_request_size))),
         sm::make_derive("requests_shed", _stats.requests_shed,
                         sm::description("Holds an incrementing counter with the requests that were shed due to overload (threshold configured via max_concurrent_requests_per_shard). "
                                             "The first derivative of this value shows how often we shed requests due to overload in the \"CQL transport\" component.")),
         sm::make_gauge("requests_memory_available", [this] { return _memory_available.current(); },
                         sm::description(
                             seastar::format("Holds the amount of available memory for admitting new requests (max is {}B)."
-                                            "Zero value indicates that our bottleneck is memory and more specifically - the memory quota allocated for the \"CQL transport\" component.", _max_request_size)))
+                                            "Zero value indicates that our bottleneck is memory and more specifically - the memory quota allocated for the \"CQL transport\" component.", _config.max_request_size)))
     };
 
     std::vector<sm::metric_definition> transport_metrics;
@@ -600,10 +599,10 @@ future<> cql_server::connection::process_request() {
         auto op = f.opcode;
         auto stream = f.stream;
         auto mem_estimate = f.length * 2 + 8000; // Allow for extra copies and bookkeeping
-        if (mem_estimate > _server._max_request_size) {
+        if (mem_estimate > _server._config.max_request_size) {
             return _read_buf.skip(f.length).then([length = f.length, stream = f.stream, mem_estimate, this] () {
                 write_response(make_error(stream, exceptions::exception_code::INVALID,
-                        format("request size too large (frame size {:d}; estimate {:d}; allowed {:d}", length, mem_estimate, _server._max_request_size),
+                        format("request size too large (frame size {:d}; estimate {:d}; allowed {:d}", length, mem_estimate, _server._config.max_request_size),
                         tracing::trace_state_ptr()));
                 return make_ready_future<>();
             });
