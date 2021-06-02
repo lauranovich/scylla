@@ -156,7 +156,6 @@ cql_server::cql_server(distributed<cql3::query_processor>& qp, auth::service& au
     : server("CQLServer", clogger)
     , _query_processor(qp)
     , _config(std::move(config))
-    , _max_concurrent_requests(db.get_config().max_concurrent_requests_per_shard)
     , _memory_available(ml.get_semaphore())
     , _notifier(std::make_unique<event_notifier>(mn))
     , _auth_service(auth_service)
@@ -608,7 +607,7 @@ future<> cql_server::connection::process_request() {
             });
         }
 
-        if (_server._stats.requests_serving > _server._max_concurrent_requests) {
+        if (_server._stats.requests_serving > _server._config.max_concurrent_requests) {
             ++_server._stats.requests_shed;
             return _read_buf.skip(f.length).then([this, stream = f.stream] {
                 write_response(make_error(stream, exceptions::exception_code::OVERLOADED,

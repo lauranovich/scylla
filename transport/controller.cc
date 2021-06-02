@@ -87,6 +87,7 @@ future<> controller::do_start_server() {
         smp_service_group_config cql_server_smp_service_group_config;
         cql_server_smp_service_group_config.max_nonlocal_requests = 5000;
         cql_server_config.bounce_request_smp_service_group = create_smp_service_group(cql_server_smp_service_group_config).get0();
+        cql_server_config.max_concurrent_requests = cfg.max_concurrent_requests_per_shard;
         const seastar::net::inet_address ip = gms::inet_address::lookup(addr, family, preferred).get0();
 
         struct listen_cfg {

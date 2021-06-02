@@ -121,6 +121,7 @@ struct cql_server_config {
     std::optional<uint16_t> shard_aware_transport_port_ssl;
     bool allow_shard_aware_drivers = true;
     smp_service_group bounce_request_smp_service_group = default_smp_service_group();
+    utils::updateable_value<uint32_t> max_concurrent_requests;
 };
 
 class cql_server : public seastar::peering_sharded_service<cql_server>, public generic_server::server {
@@ -153,7 +154,6 @@ private:
 
     distributed<cql3::query_processor>& _query_processor;
     cql_server_config _config;
-    utils::updateable_value<uint32_t> _max_concurrent_requests;
     semaphore& _memory_available;
     seastar::metrics::metric_groups _metrics;
     std::unique_ptr<event_notifier> _notifier;
