@@ -28,7 +28,6 @@
 using namespace seastar;
 
 namespace cql_transport { class cql_server; }
-class database;
 namespace auth { class service; }
 namespace service {
     class migration_notifier;
@@ -37,6 +36,7 @@ namespace service {
 namespace gms { class gossiper; }
 namespace cql3 { class query_processor; }
 namespace qos { class service_level_controller; }
+namespace db { class config; }
 
 namespace cql_transport {
 
@@ -45,7 +45,7 @@ class controller {
     semaphore _ops_sem; /* protects start/stop operations on _server */
     bool _stopped = false;
 
-    distributed<database>& _db;
+    db::config& _config;
     sharded<auth::service>& _auth_service;
     sharded<service::migration_notifier>& _mnotifier;
     gms::gossiper& _gossiper;
@@ -58,7 +58,7 @@ class controller {
     future<> do_stop_server();
 
 public:
-    controller(distributed<database>&, sharded<auth::service>&, sharded<service::migration_notifier>&, gms::gossiper&, sharded<cql3::query_processor>&, sharded<service::memory_limiter>&, sharded<qos::service_level_controller>&);
+    controller(db::config&, sharded<auth::service>&, sharded<service::migration_notifier>&, gms::gossiper&, sharded<cql3::query_processor>&, sharded<service::memory_limiter>&, sharded<qos::service_level_controller>&);
     future<> start_server();
     future<> stop_server();
     future<> stop();

@@ -22,7 +22,6 @@
 #include "transport/controller.hh"
 #include "transport/server.hh"
 #include "service/memory_limiter.hh"
-#include "database.hh"
 #include "db/config.hh"
 #include "gms/gossiper.hh"
 #include "log.hh"
@@ -33,10 +32,10 @@ namespace cql_transport {
 
 static logging::logger logger("cql_server_controller");
 
-controller::controller(distributed<database>& db, sharded<auth::service>& auth, sharded<service::migration_notifier>& mn, gms::gossiper& gossiper, sharded<cql3::query_processor>& qp, sharded<service::memory_limiter>& ml,
+controller::controller(db::config& cfg, sharded<auth::service>& auth, sharded<service::migration_notifier>& mn, gms::gossiper& gossiper, sharded<cql3::query_processor>& qp, sharded<service::memory_limiter>& ml,
         sharded<qos::service_level_controller>& sl_controller)
     : _ops_sem(1)
-    , _db(db)
+    , _config(cfg)
     , _auth_service(auth)
     , _mnotifier(mn)
     , _gossiper(gossiper)
@@ -64,7 +63,7 @@ future<> controller::do_start_server() {
         _server = std::make_unique<distributed<cql_transport::cql_server>>();
         auto cserver = &*_server;
 
-        auto& cfg = _db.local().get_config();
+        auto& cfg = _config;
         auto addr = cfg.rpc_address();
         auto preferred = cfg.rpc_interface_prefer_ipv6() ? std::make_optional(net::inet_address::family::INET6) : std::nullopt;
         auto family = cfg.enable_ipv6_dns_lookup() || preferred ? std::nullopt : std::make_optional(net::inet_address::family::INET);
